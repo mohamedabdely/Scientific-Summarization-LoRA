@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Comparison Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --primary: #2563eb;
+            --gold: #f59e0b;
+            --t5: #7c3aed;
+            --lora-pre: #ea580c;
+            --lora-post: #16a34a;
+            --text: #1e293b;
+            --border: #e2e8f0;
+        }
+
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        .setup-panel {
+            background: white; padding: 40px; border-radius: 16px; 
+            text-align: center; border: 2px dashed var(--primary); margin-bottom: 30px;
+        }
+
+        .controls {
+            display: none; justify-content: space-between; align-items: center;
+            background: var(--card-bg); padding: 15px 25px; border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); margin-bottom: 30px;
+            position: sticky; top: 10px; z-index: 1000; border: 1px solid var(--border);
+        }
+
+        select { padding: 10px; border-radius: 8px; border: 2px solid var(--primary); font-weight: 600; min-width: 350px; outline: none; cursor: pointer; }
+
+        .sample-card { 
+            background: var(--card-bg); border-radius: 16px; padding: 30px; 
+            margin-bottom: 50px; border: 1px solid var(--border);
+        }
+
+        .sample-header { 
+            font-size: 1.25rem; font-weight: 800; color: #64748b; 
+            margin-bottom: 25px; display: flex; align-items: center; gap: 10px;
+        }
+        .sample-header::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+        .stack { display: flex; flex-direction: column; gap: 20px; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+        .box { padding: 20px; border-radius: 12px; background: #ffffff; border: 1px solid var(--border); border-left: 6px solid #ccc; min-height: 100px; }
+        .gold-box { border-left-color: var(--gold); background: #fffcf0; }
+        .t5-box { border-left-color: var(--t5); }
+        .pre-box { border-left-color: var(--lora-pre); }
+        .post-box { border-left-color: var(--lora-post); }
+
+        h4 { margin: 0 0 10px 0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
+        .summary-text { font-size: 1.05rem; line-height: 1.6; color: #334155; }
+
+        .metrics-grid {
+            margin-top: 15px; display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); 
+            gap: 8px; padding-top: 15px; border-top: 1px solid #f1f5f9;
+        }
+
+        .metric-item {
+            background: #f8fafc; padding: 6px 10px; border-radius: 6px;
+            border: 1px solid #f1f5f9; display: flex; flex-direction: column;
+        }
+
+        .m-key { font-size: 0.6rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; line-height: 1.2; }
+        .m-val { font-family: monospace; font-size: 0.85rem; font-weight: 700; color: #1e293b; margin-top: 2px; }
+
+        #csvFileInput { cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="uploadPanel" class="setup-panel">
+        <h2 style="color:var(--primary)">Summarization Analysis Dashboard</h2>
+        <p>Select your <b>qualitative_results.csv</b> to begin.</p>
+        <input type="file" id="csvFileInput" accept=".csv">
+    </div>
+
+    <div id="controls" class="controls">
+        <div>
+            <label style="font-size:0.7rem; font-weight:800; color:#64748b; display:block; margin-bottom:4px">CURRENT MODEL CONFIGURATION</label>
+            <select id="modelSelect" onchange="render()"></select>
+        </div>
+        <div id="stats" style="font-size: 0.9rem; font-weight: 600; color: var(--primary)"></div>
+    </div>
+
+    <div id="main-view"></div>
+</div>
+
+<script>
+    let groupedData = {};
+    const TARGET_METRICS = {
+        "FAITH": "Faith",
+        "RL_F1": "R-L F1",
+        "RL_R": "R-L Recall",
+        "RL_P": "R-L Prec.",
+        "BS_F1": "BS F1",
+        "BS_R": "BS Recall",
+        "BS_P": "BS Prec."
+    };
+
+    // Helper to make "lora_t5_r16_alpha32" look like "LoRA T5 (Rank: 16, Alpha: 32)"
+    function prettifyName(name) {
+        if (!name) return "";
+        let pretty = name.replace(/_/g, ' ');
+        pretty = pretty.replace(/r(\d+)/i, 'Rank: $1');
+        pretty = pretty.replace(/alpha(\d+)/i, 'Alpha: $1');
+        return pretty.replace(/\b\w/g, l => l.toUpperCase());
+    }
+
+    document.getElementById('csvFileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        Papa.parse(file, {
+            header: true, skipEmptyLines: true,
+            complete: (results) => processData(results.data)
+        });
+    });
+
+    function processData(data) {
+        groupedData = {};
+        data.forEach(row => {
+            const tag = row.model_tag;
+            if (!tag) return;
+            if (!groupedData[tag]) groupedData[tag] = [];
+            groupedData[tag].push(row);
+        });
+
+        const select = document.getElementById('modelSelect');
+        select.innerHTML = '';
+        Object.keys(groupedData).sort().forEach(tag => {
+            const opt = document.createElement('option');
+            opt.value = tag;
+            opt.textContent = prettifyName(tag);
+            select.appendChild(opt);
+        });
+
+        document.getElementById('uploadPanel').style.display = 'none';
+        document.getElementById('controls').style.display = 'flex';
+        render();
+    }
+
+    function generateMetricsHTML(jsonStr) {
+        if (!jsonStr || jsonStr === "{}") return '';
+        try {
+            const raw = JSON.parse(jsonStr.trim().replace(/^"|"$/g, ''));
+            let html = '<div class="metrics-grid">';
+            for (const [apiKey, displayName] of Object.entries(TARGET_METRICS)) {
+                const value = raw[apiKey];
+                if (value !== undefined) {
+                    const formattedVal = typeof value === 'number' ? value.toFixed(4) : value;
+                    html += `<div class="metric-item"><span class="m-key">${displayName}</span><span class="m-val">${formattedVal}</span></div>`;
+                }
+            }
+            return html + '</div>';
+        } catch (e) { return ''; }
+    }
+
+    function render() {
+        const tag = document.getElementById('modelSelect').value;
+        const samples = groupedData[tag];
+        const container = document.getElementById('main-view');
+        const prettyTag = prettifyName(tag);
+        
+        document.getElementById('stats').innerText = `${samples.length} Samples Loaded`;
+        
+        container.innerHTML = '';
+        samples.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'sample-card';
+            card.innerHTML = `
+                <div class="sample-header">Sample #${s.sample_id}</div>
+                <div class="stack">
+                    <div class="box gold-box">
+                        <h4>🎯 Gold Summary</h4>
+                        <div class="summary-text">${s.gold_summary}</div>
+                    </div>
+
+                    <div class="box t5-box">
+                        <h4>🤖 T5 Base Summary</h4>
+                        <div class="summary-text">${s.t5_summary}</div>
+                        ${generateMetricsHTML(s.t5_metrics)}
+                    </div>
+
+                    <div class="row">
+                        <div class="box pre-box">
+                            <h4>🟠 ${prettyTag} (Normal)</h4>
+                            <div class="summary-text">${s.lora_summary_before}</div>
+                            ${generateMetricsHTML(s.lora_metrics_before)}
+                        </div>
+
+                        <div class="box post-box">
+                            <h4>🟢 ${prettyTag} (Post-Processed)</h4>
+                            <div class="summary-text">${s.lora_summary_after}</div>
+                            ${generateMetricsHTML(s.lora_metrics_after)}
+                        </div>
+                    </div>
+                </div>`;
+            container.appendChild(card);
+        });
+        
+        // Removed window.scrollTo so position remains steady on model change.
+    }
+</script>
+</body>
+</html>
