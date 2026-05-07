@@ -104,9 +104,9 @@ if run_btn:
                 lora_sum_refined = post_processing_nli(lora_sum_raw)
                 
                 st.write("📊 **Metrics:** Calculating Faithfulness and ROUGE scores...")
-                m_t5 = get_metrics(gold, t5_sum, inp, nli_pipeline)
-                m_lora_raw = get_metrics(gold, lora_sum_raw, inp, nli_pipeline)
-                m_lora_ref = get_metrics(gold, lora_sum_refined, inp, nli_pipeline)
+                m_t5 = get_metrics(gold, t5_sum, inp)
+                m_lora_raw = get_metrics(gold, lora_sum_raw, inp)
+                m_lora_ref = get_metrics(gold, lora_sum_refined, inp)
                 
                 status.update(label="✅ Analysis Complete!", state="complete", expanded=False)
 
