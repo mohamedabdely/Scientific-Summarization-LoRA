@@ -44,14 +44,23 @@ The repository includes detailed evidence of model performance:
 ### Local Setup
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/mohamedabdely/Scientific-Summarization-LoRA.git](https://github.com/mohamedabdely/Scientific-Summarization-LoRA.git)
-   cd Scientific-Summarization-LoRA
+   !git clone https://github.com/mohamedabdely/Scientific-Summarization-LoRA.git
+   %cd Scientific-Summarization-LoRA
 2. **Install Dependencies**
-> pip install -r requirements.txt
-> !npm install -g localtunnel 
+   ```bash
+   pip install -r requirements.txt
+   !npm install -g localtunnel
 
 3. **Run the Dashboard**
-> streamlit run app.py
+- To run the application on your local machine, execute the following command in your terminal:
+   ```bash
+   streamlit run app.py
+- To run the application on your Google Collab, execute the following command in a new cell
+   ```bash
+   > import urllib
+   > print("Your Password for the link is:", urllib.request.urlopen('https://ipv4.icanhazip.com').read().decode('utf8').strip())
+   > !streamlit run app.py & npx localtunnel --port 8501
+
 4. **Hardware Requirements**
 > GPU (Recommended): NVIDIA GPU with 8GB+ VRAM (e.g., T4, RTX 3060+) for fast inference.
 
