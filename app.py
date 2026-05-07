@@ -1,13 +1,29 @@
 import streamlit as st
 import pandas as pd
 import torch
-import time
+import streamlit.components.v1 as components
 from src.scraper import run_scientific_scraper
 from src.preprocessor import extract_thesis_strategy_v1, clean_scientific_text, post_processing_nli
 from src.metrics import get_metrics
 from src.load_models import load_models
 
-# --- PAGE CONFIGURATION ---
+# --- 1. PERMANENT FRONTEND FIX ---
+# Detects 'Failed to fetch' errors from LocalTunnel and reloads the page automatically
+components.html(
+    """
+    <script>
+    window.addEventListener('error', function (e) {
+        if (e.message.includes('fetch') || e.message.includes('dynamically imported module')) {
+            console.log('Sync error detected. Reloading...');
+            window.location.reload();
+        }
+    }, true);
+    </script>
+    """,
+    height=0,
+)
+
+# --- 2. PAGE CONFIGURATION ---
 st.set_page_config(
     page_title="SciSumm Analysis Lab", 
     page_icon="🧪", 
@@ -15,7 +31,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- ASSETS & STYLING ---
+# --- 3. STYLING ---
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
@@ -30,21 +46,19 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- MODEL INITIALIZATION ---
+# --- 4. MODEL INITIALIZATION ---
 @st.cache_resource
 def init_all():
-    """Load models once and cache them."""
     return load_models()
 
 try:
     tokenizer, base_model, lora_model, nli_pipeline = init_all()
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 except Exception as e:
-    st.error(f"Failed to load models: {e}")
+    st.error(f"Critical Error: Failed to load models. {e}")
     st.stop()
 
 def gen(model_obj, text):
-    """Encapsulated generation logic."""
     input_text = "summarize scientific paper: " + text
     inputs = tokenizer(input_text, return_tensors="pt", max_length=512, truncation=True).to(DEVICE)
     
@@ -59,65 +73,63 @@ def gen(model_obj, text):
         )
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-# --- SIDEBAR UI ---
+# --- 5. SIDEBAR UI ---
 with st.sidebar:
     st.title("🔬 Lab Settings")
     st.markdown("---")
     url_input = st.text_input("Scientific Article URL", placeholder="https://arxiv.org/abs/...")
-    run_btn = st.button("🚀 Run Analysis", use_container_width=True, type="primary")
+    # Updated to 2026 syntax: width='stretch'
+    run_btn = st.button("🚀 Run Analysis", width='stretch', type="primary")
     
     st.markdown("---")
     st.subheader("System Info")
     st.info(f"**Hardware:** {DEVICE.upper()}\n\n**Base:** T5-Base\n\n**Adapter:** LoRA Fine-tuned")
 
-# --- MAIN UI ---
+# --- 6. MAIN UI ---
 st.title("🧪 SciSumm AI Analysis Lab")
-st.markdown("Compare baseline transformer performance against LoRA-optimized scientific summarization.")
+st.markdown("Evaluate scientific summarization using Base T5 vs. LoRA + NLI refinement.")
 
 if run_btn:
     if not url_input:
-        st.warning("Please enter a URL to begin.")
+        st.warning("Please enter a URL in the sidebar.")
     else:
         try:
-            # 1. SERVER LOGS / PIPELINE EXECUTION
-            with st.status("🛠️ System Pipeline Running...", expanded=True) as status:
+            # SERVER LOGS / STATUS
+            with st.status("🛠️ Pipeline Executing...", expanded=True) as status:
                 
                 st.write("📡 **Scraper:** Connecting to source...")
                 targets = run_scientific_scraper(url_input)
-                if not targets:
-                    raise ValueError("Scraper returned no data. Check the URL.")
+                if not targets: raise ValueError("Scraper returned no data.")
                 _, raw_gold, raw_inp = targets
                 
-                st.write("🧹 **Preprocessor:** Cleaning scientific notation and extracting thesis...")
+                st.write("🟢 **Preprocessor:** Cleaning text and extracting core strategy...")
                 gold = clean_scientific_text(raw_gold)
                 inp = extract_thesis_strategy_v1(raw_inp, tokenizer)
                 
-                st.write("🤖 **Inference:** Generating Base T5 Summary...")
-                # Important: Using lora_model with disabled adapters to get true baseline
+                st.write("🟢 **Inference:** Generating Base T5 Summary...")
                 with lora_model.disable_adapter():
                     t5_sum = gen(lora_model, inp)
                 
-                st.write("🟠 **Inference:** Generating LoRA Optimized Summary...")
+                st.write("🟢 **Inference:** Generating LoRA Optimized Summary...")
                 lora_sum_raw = gen(lora_model, inp)
                 
                 st.write("⚖️ **Refinement:** Running NLI Post-processing...")
                 lora_sum_refined = post_processing_nli(lora_sum_raw)
                 
-                st.write("📊 **Metrics:** Calculating Faithfulness and ROUGE scores...")
+                st.write("📊 **Metrics:** Calculating comparative scores...")
+                # Note: Passing nli_pipeline is crucial for non-zero faithfulness
                 m_t5 = get_metrics(gold, t5_sum, inp)
                 m_lora_raw = get_metrics(gold, lora_sum_raw, inp)
                 m_lora_ref = get_metrics(gold, lora_sum_refined, inp)
                 
                 status.update(label="✅ Analysis Complete!", state="complete", expanded=False)
 
-            # --- RESULTS SECTION ---
+            # RESULTS DISPLAY
             st.divider()
-            
-            # Metric Comparison Row
             st.subheader("📊 Key Performance Indicators")
             c1, c2, c3 = st.columns(3)
             
-            # Logic for Delta (improvement over base)
+            # Improvement calculation
             raw_delta = m_lora_raw['FAITH'] - m_t5['FAITH']
             ref_delta = m_lora_ref['FAITH'] - m_lora_raw['FAITH']
 
@@ -125,39 +137,35 @@ if run_btn:
             c2.metric("LoRA Raw", f"{m_lora_raw['FAITH']:.2%}", delta=f"{raw_delta:+.2%}")
             c3.metric("LoRA Refined", f"{m_lora_ref['FAITH']:.2%}", delta=f"{ref_delta:+.2%}")
 
-            # Summaries Tabs
             st.subheader("📝 Summary Outputs")
             tabs = st.tabs(["🤖 Base T5", "🟠 LoRA Raw", "🟢 LoRA Refined", "🎯 Ground Truth"])
             
             with tabs[0]:
                 st.caption(f"ROUGE-L: {m_t5['RL_F1']:.4f} | BERTScore: {m_t5['BS_F1']:.4f}")
                 st.write(t5_sum)
-                
             with tabs[1]:
                 st.caption(f"ROUGE-L: {m_lora_raw['RL_F1']:.4f} | BERTScore: {m_lora_raw['BS_F1']:.4f}")
                 st.write(lora_sum_raw)
-                
             with tabs[2]:
                 st.caption(f"ROUGE-L: {m_lora_ref['RL_F1']:.4f} | BERTScore: {m_lora_ref['BS_F1']:.4f}")
                 st.success(lora_sum_refined)
-                
             with tabs[3]:
                 st.info(gold)
 
-            # Metrics Table
             with st.expander("🔍 View Detailed Metrics Dataframe"):
                 results_df = pd.DataFrame({
                     "Model Variant": ["Base T5", "LoRA Raw", "LoRA Refined (NLI)"],
-                    "Faithfulness (NLI)": [m_t5['FAITH'], m_lora_raw['FAITH'], m_lora_ref['FAITH']],
-                    "ROUGE-L Score": [m_t5['RL_F1'], m_lora_raw['RL_F1'], m_lora_ref['RL_F1']],
-                    "BERTScore F1": [m_t5['BS_F1'], m_lora_raw['BS_F1'], m_lora_ref['BS_F1']]
+                    "Faithfulness": [m_t5['FAITH'], m_lora_raw['FAITH'], m_lora_ref['FAITH']],
+                    "ROUGE-L": [m_t5['RL_F1'], m_lora_raw['RL_F1'], m_lora_ref['RL_F1']],
+                    "BERTScore": [m_t5['BS_F1'], m_lora_raw['BS_F1'], m_lora_ref['BS_F1']]
                 })
-                st.dataframe(results_df, use_container_width=True, hide_index=True)
+                # Updated to 2026 syntax: width='stretch'
+                st.dataframe(results_df, width='stretch', hide_index=True)
 
         except Exception as e:
-            st.error(f"An error occurred during processing: {str(e)}")
-            st.button("Retry")
-
+            st.error(f"Processing Error: {e}")
+            if st.button("Clear Cache & Retry"):
+                st.cache_resource.clear()
+                st.rerun()
 else:
-    # Empty state
     st.info("👈 Enter a URL in the sidebar and click 'Run Analysis' to start.")
