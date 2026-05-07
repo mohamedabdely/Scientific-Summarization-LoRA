@@ -57,9 +57,9 @@ The repository includes detailed evidence of model performance:
    streamlit run app.py
 - To run the application on your Google Collab, execute the following command in a new cell
    ```bash
-   > import urllib
-   > print("Your Password for the link is:", urllib.request.urlopen('https://ipv4.icanhazip.com').read().decode('utf8').strip())
-   > !streamlit run app.py & npx localtunnel --port 8501
+   import urllib
+   print("Your Password for the link is:", urllib.request.urlopen('https://ipv4.icanhazip.com').read().decode('utf8').strip())
+   !streamlit run app.py & npx localtunnel --port 8501
 4. **Testing Time**
 > Make sure to use the html url to infer  the model on arxiv paprs (e.g: https://arxiv.org/html/2605.05191v1)
 
