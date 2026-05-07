@@ -133,7 +133,7 @@ if run_btn:
             
             with tabs[0]:
                 st.caption(f"ROUGE-L: {m_t5['RL_F1']:.4f} | BERTScore: {m_t5['BS_F1']:.4f}")
-                st.metric(t5_sum)
+                st.write(t5_sum)
 
             with tabs[1]:
                 # Dynamic indicators for LoRA Raw vs Base
