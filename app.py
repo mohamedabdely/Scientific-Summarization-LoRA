@@ -100,9 +100,9 @@ if run_btn:
                 
                 update_log("📊 Metrics: Calculating Faithfulness, ROUGE, BERTScore...")
                 # CRITICAL: Passing nli_pipeline here ensures scores aren't 0
-                m_t5 = get_metrics(gold, t5_sum, inp, nli_pipeline)
-                m_raw = get_metrics(gold, lora_sum_raw, inp, nli_pipeline)
-                m_ref = get_metrics(gold, lora_sum_refined, inp, nli_pipeline)
+                m_t5 = get_metrics(gold, t5_sum, inp)
+                m_raw = get_metrics(gold, lora_sum_raw, inp)
+                m_ref = get_metrics(gold, lora_sum_refined, inp)
                 
                 update_log("✅ All tasks finished.")
 
