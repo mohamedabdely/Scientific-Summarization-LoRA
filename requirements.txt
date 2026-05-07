@@ -1,4 +1,4 @@
-torchao
+torchao>=0.16.0
 transformers 
 datasets 
 rouge_score 
