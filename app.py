@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import torch
 from src.scraper import run_scientific_scraper
 from src.preprocessor import extract_thesis_strategy_v1, clean_scientific_text, post_processing_nli
 from src.metrics import get_metrics
