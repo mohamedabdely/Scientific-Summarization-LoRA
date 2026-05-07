@@ -7,7 +7,6 @@ from src.preprocessor import extract_thesis_strategy_v1, clean_scientific_text, 
 from src.metrics import get_metrics
 from src.load_models import load_models
 
-
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
     page_title="SciSumm Analysis Lab", 
@@ -55,7 +54,7 @@ with st.sidebar:
     st.subheader("System Info")
     st.info(f"**Hardware:** {DEVICE.upper()}\n\n**Base:** T5-Base\n\n**Adapter:** LoRA Fine-tuned")
 
-# --- 6. MAIN UI ---
+# --- 4. MAIN UI ---
 st.title("🧪 SciSumm AI Analysis Lab")
 st.markdown("Evaluate scientific summarization using Base T5 vs. LoRA + NLI refinement.")
 
@@ -76,14 +75,14 @@ if run_btn:
                 gold = clean_scientific_text(raw_gold)
                 inp = extract_thesis_strategy_v1(raw_inp, tokenizer)
                 
-                st.write("⚙️ **Inference:** Generating Base T5 Summary...")
+                st.write("🤖 **Inference:** Generating Base T5 Summary...")
                 with lora_model.disable_adapter():
                     t5_sum = gen(lora_model, inp)
                 
-                st.write("⚙️ **Inference:** Generating LoRA Optimized Summary...")
+                st.write("🟠 **Inference:** Generating LoRA Optimized Summary...")
                 lora_sum_raw = gen(lora_model, inp)
                 
-                st.write("⚙️ **Inference:** Generating refinement via NLI Post-processing...")
+                st.write("⚖️ **Refinement:** Running NLI Post-processing...")
                 lora_sum_refined = post_processing_nli(lora_sum_raw)
                 
                 st.write("📊 **Metrics:** Calculating comparative scores...")
@@ -93,32 +92,45 @@ if run_btn:
                 m_lora_ref = get_metrics(gold, lora_sum_refined, inp)
                 
                 status.update(label="✅ Analysis Complete!", state="complete", expanded=False)
-
-            # RESULTS DISPLAY
-            st.divider()
-            st.subheader("📊 Key Performance Indicators")
-            c1, c2, c3 = st.columns(3)
             
-            # Improvement calculation
-            raw_delta = m_lora_raw['FAITH'] - m_t5['FAITH']
-            ref_delta = m_lora_ref['FAITH'] - m_lora_raw['FAITH']
+            # --- Improvement calculations ---
+            # Calculate ROUGE-L Differences
+            rl_diff_raw = m_lora_raw['RL_F1'] - m_t5['RL_F1']
+            rl_diff_ref = m_lora_ref['RL_F1'] - m_lora_raw['RL_F1']
 
-            c1.metric("Base T5 Faithfulness", f"{m_t5['FAITH']:.2%}")
-            c2.metric("LoRA Raw", f"{m_lora_raw['FAITH']:.2%}", delta=f"{raw_delta:+.2%}")
-            c3.metric("LoRA Refined", f"{m_lora_ref['FAITH']:.2%}", delta=f"{ref_delta:+.2%}")
+            # Calculate BERTScore Differences
+            bs_diff_raw = m_lora_raw['BS_F1'] - m_t5['BS_F1']
+            bs_diff_ref = m_lora_ref['BS_F1'] - m_lora_raw['BS_F1']
 
             st.subheader("📝 Summary Outputs")
-            tabs = st.tabs(["🔴 Base T5", "🟠 LoRA Raw", "🟢 LoRA Refined", "🎯 Ground Truth"])
+            tabs = st.tabs(["🤖 Base T5", "🟠 LoRA Raw", "🟢 LoRA Refined", "🎯 Ground Truth"])
             
             with tabs[0]:
                 st.caption(f"ROUGE-L: {m_t5['RL_F1']:.4f} | BERTScore: {m_t5['BS_F1']:.4f}")
                 st.metric(t5_sum)
+
             with tabs[1]:
-                st.caption(f"ROUGE-L: {m_lora_raw['RL_F1']:.4f} | BERTScore: {m_lora_raw['BS_F1']:.4f}")
+                # Dynamic indicators for LoRA Raw vs Base
+                rl_arrow = "↑" if rl_diff_raw >= 0 else "↓"
+                bs_arrow = "↑" if bs_diff_raw >= 0 else "↓"
+                
+                st.caption(
+                    f"ROUGE-L: {m_lora_raw['RL_F1']:.4f} ({rl_arrow} {rl_diff_raw:+.2%}) | "
+                    f"BERTScore: {m_lora_raw['BS_F1']:.4f} ({bs_arrow} {bs_diff_raw:+.2%})"
+                )
                 st.warning(lora_sum_raw)
+
             with tabs[2]:
-                st.caption(f"ROUGE-L: {m_lora_ref['RL_F1']:.4f} | BERTScore: {m_lora_ref['BS_F1']:.4f}")
+                # Dynamic indicators for Refined vs Raw
+                rl_arrow_ref = "↑" if rl_diff_ref >= 0 else "↓"
+                bs_arrow_ref = "↑" if bs_diff_ref >= 0 else "↓"
+                
+                st.caption(
+                    f"ROUGE-L: {m_lora_ref['RL_F1']:.4f} ({rl_arrow_ref} {rl_diff_ref:+.2%}) | "
+                    f"BERTScore: {m_lora_ref['BS_F1']:.4f} ({bs_arrow_ref} {bs_diff_ref:+.2%})"
+                )
                 st.success(lora_sum_refined)
+
             with tabs[3]:
                 st.info(gold)
 
