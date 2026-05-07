@@ -60,8 +60,10 @@ The repository includes detailed evidence of model performance:
    > import urllib
    > print("Your Password for the link is:", urllib.request.urlopen('https://ipv4.icanhazip.com').read().decode('utf8').strip())
    > !streamlit run app.py & npx localtunnel --port 8501
+4. **Testing Time**
+> Make sure to use the html url to infer  the model on arxiv paprs (e.g: https://arxiv.org/html/2605.05191v1)
 
-4. **Hardware Requirements**
+6. **Hardware Requirements**
 > GPU (Recommended): NVIDIA GPU with 8GB+ VRAM (e.g., T4, RTX 3060+) for fast inference.
 
 > CPU: Supported, but inference times will be significantly higher.
