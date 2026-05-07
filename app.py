@@ -47,9 +47,9 @@ if run_btn:
             refined_sum = post_processing_nli(lora_sum)
             
             # 3. Metrics (Ensure nli_pipeline is passed here!)
-            m_t5 = get_metrics(gold, t5_sum, inp, nli_pipeline)
-            m_raw = get_metrics(gold, lora_sum, inp, nli_pipeline)
-            m_ref = get_metrics(gold, refined_sum, inp, nli_pipeline)
+            m_t5 = get_metrics(gold, t5_sum, inp)
+            m_raw = get_metrics(gold, lora_sum, inp)
+            m_ref = get_metrics(gold, refined_sum, inp)
 
         # --- RESULTS (Using simple columns and markdown to avoid JS errors) ---
         st.subheader("📊 Improvement Metrics")
