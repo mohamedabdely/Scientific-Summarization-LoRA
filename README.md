@@ -48,6 +48,8 @@ The repository includes detailed evidence of model performance:
    cd Scientific-Summarization-LoRA
 2. **Install Dependencies**
 > pip install -r requirements.txt
+> !npm install -g localtunnel 
+
 3. **Run the Dashboard**
 > streamlit run app.py
 4. **Hardware Requirements**
