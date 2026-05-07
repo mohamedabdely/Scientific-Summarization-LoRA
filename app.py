@@ -92,7 +92,33 @@ if run_btn:
                 m_lora_ref = get_metrics(gold, lora_sum_refined, inp)
                 
                 status.update(label="✅ Analysis Complete!", state="complete", expanded=False)
+
+            # RESULTS DISPLAY
+            st.divider()
+            st.subheader("📊 Key Performance Indicators")
+            c1, c2, c3 = st.columns(3)
             
+            # Improvement calculations for Faithfulness
+            raw_delta_faith = m_lora_raw['FAITH'] - m_t5['FAITH']
+            ref_delta_faith = m_lora_ref['FAITH'] - m_lora_raw['FAITH']
+    
+            # Ensure value is the SECOND positional argument
+            c1.metric(
+                label="Base T5 Faithfulness", 
+                value=f"{m_t5['FAITH']:.2%}"
+            )
+            
+            c2.metric(
+                label="LoRA Raw", 
+                value=f"{m_lora_raw['FAITH']:.2%}", 
+                delta=f"{raw_delta_faith:+.2%}"
+            )
+            
+            c3.metric(
+                label="LoRA Refined", 
+                value=f"{m_lora_ref['FAITH']:.2%}", 
+                delta=f"{ref_delta_faith:+.2%}"
+            )
             # --- Improvement calculations ---
             # Calculate ROUGE-L Differences
             rl_diff_raw = m_lora_raw['RL_F1'] - m_t5['RL_F1']
