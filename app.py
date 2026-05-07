@@ -7,21 +7,7 @@ from src.preprocessor import extract_thesis_strategy_v1, clean_scientific_text, 
 from src.metrics import get_metrics
 from src.load_models import load_models
 
-# --- 1. FRONTEND SYNC FIX ---
-components.html(
-    """
-    <script>
-    window.addEventListener('error', function (e) {
-        if (e.message.includes('fetch') || e.message.includes('dynamically imported module')) {
-            window.location.reload();
-        }
-    }, true);
-    </script>
-    """,
-    height=0,
-)
-
-# --- 2. PAGE CONFIGURATION ---
+# --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
     page_title="SciSumm Analysis Lab", 
     page_icon="🧪", 
@@ -29,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 3. MODEL INITIALIZATION ---
+# --- 2. MODEL INITIALIZATION ---
 @st.cache_resource
 def init_all():
     return load_models()
@@ -55,7 +41,7 @@ def gen(model_obj, text):
         )
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-# --- 4. SIDEBAR UI ---
+# --- 3. SIDEBAR UI ---
 with st.sidebar:
     st.title("🔬 Lab Settings")
     st.markdown("---")
@@ -65,7 +51,7 @@ with st.sidebar:
     st.subheader("System Info")
     st.info(f"**Hardware:** {DEVICE.upper()}\n\n**Base:** T5-Base\n\n**Adapter:** LoRA Fine-tuned")
 
-# --- 5. MAIN UI ---
+# --- 4. MAIN UI ---
 st.title("🧪 SciSumm AI Analysis Lab")
 st.markdown("Evaluate scientific summarization using Base T5 vs. LoRA + NLI refinement.")
 
@@ -96,9 +82,9 @@ if run_btn:
                 
                 st.write("📊 **Metrics:** Calculating comparative scores...")
                 # FIX: Passing nli_pipeline is required for Faithfulness calculation
-                m_t5 = get_metrics(gold, t5_sum, inp, nli_pipeline)
-                m_raw = get_metrics(gold, lora_sum_raw, inp, nli_pipeline)
-                m_ref = get_metrics(gold, lora_sum_refined, inp, nli_pipeline)
+                m_t5 = get_metrics(gold, t5_sum, inp)
+                m_raw = get_metrics(gold, lora_sum_raw, inp)
+                m_ref = get_metrics(gold, lora_sum_refined, inp)
                 
                 status.update(label="✅ Analysis Complete!", state="complete", expanded=False)
 
