@@ -7,7 +7,21 @@ from src.preprocessor import extract_thesis_strategy_v1, clean_scientific_text, 
 from src.metrics import get_metrics
 from src.load_models import load_models
 
-# --- 1. PAGE CONFIGURATION ---
+# --- 1. FRONTEND SYNC FIX ---
+components.html(
+    """
+    <script>
+    window.addEventListener('error', function (e) {
+        if (e.message.includes('fetch') || e.message.includes('dynamically imported module')) {
+            window.location.reload();
+        }
+    }, true);
+    </script>
+    """,
+    height=0,
+)
+
+# --- 2. PAGE CONFIGURATION ---
 st.set_page_config(
     page_title="SciSumm Analysis Lab", 
     page_icon="🧪", 
@@ -15,7 +29,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. MODEL INITIALIZATION ---
+# --- 3. MODEL INITIALIZATION ---
 @st.cache_resource
 def init_all():
     return load_models()
@@ -30,7 +44,6 @@ except Exception as e:
 def gen(model_obj, text):
     input_text = "summarize scientific paper: " + text
     inputs = tokenizer(input_text, return_tensors="pt", max_length=512, truncation=True).to(DEVICE)
-    
     with torch.no_grad():
         outputs = model_obj.generate(
             **inputs, 
@@ -42,19 +55,17 @@ def gen(model_obj, text):
         )
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-# --- 3. SIDEBAR UI ---
+# --- 4. SIDEBAR UI ---
 with st.sidebar:
     st.title("🔬 Lab Settings")
     st.markdown("---")
     url_input = st.text_input("Scientific Article URL", placeholder="https://arxiv.org/html/...")
-    # Updated to 2026 syntax: width='stretch'
     run_btn = st.button("🚀 Run Analysis", width='stretch', type="primary")
-    
     st.markdown("---")
     st.subheader("System Info")
     st.info(f"**Hardware:** {DEVICE.upper()}\n\n**Base:** T5-Base\n\n**Adapter:** LoRA Fine-tuned")
 
-# --- 4. MAIN UI ---
+# --- 5. MAIN UI ---
 st.title("🧪 SciSumm AI Analysis Lab")
 st.markdown("Evaluate scientific summarization using Base T5 vs. LoRA + NLI refinement.")
 
@@ -63,107 +74,87 @@ if run_btn:
         st.warning("Please enter a URL in the sidebar.")
     else:
         try:
-            # SERVER LOGS / STATUS
             with st.status("🛠️ Pipeline Executing...", expanded=True) as status:
-                
-                st.write("📡 **Scraper:** Connecting to source...")
+                st.write("📡 **Scraper:** Fetching article...")
                 targets = run_scientific_scraper(url_input)
                 if not targets: raise ValueError("Scraper returned no data.")
                 _, raw_gold, raw_inp = targets
                 
-                st.write("🧹 **Preprocessor:** Cleaning text and extracting core strategy...")
+                st.write("🧹 **Preprocessor:** Cleaning text...")
                 gold = clean_scientific_text(raw_gold)
                 inp = extract_thesis_strategy_v1(raw_inp, tokenizer)
                 
-                st.write("🤖 **Inference:** Generating Base T5 Summary...")
+                st.write("🤖 **Inference:** Generating Base T5...")
                 with lora_model.disable_adapter():
                     t5_sum = gen(lora_model, inp)
                 
-                st.write("🟠 **Inference:** Generating LoRA Optimized Summary...")
+                st.write("🟠 **Inference:** Generating LoRA Optimized...")
                 lora_sum_raw = gen(lora_model, inp)
                 
                 st.write("⚖️ **Refinement:** Running NLI Post-processing...")
                 lora_sum_refined = post_processing_nli(lora_sum_raw)
                 
                 st.write("📊 **Metrics:** Calculating comparative scores...")
-                # Note: Passing nli_pipeline is crucial for non-zero faithfulness
-                m_t5 = get_metrics(gold, t5_sum, inp)
-                m_lora_raw = get_metrics(gold, lora_sum_raw, inp)
-                m_lora_ref = get_metrics(gold, lora_sum_refined, inp)
+                # FIX: Passing nli_pipeline is required for Faithfulness calculation
+                m_t5 = get_metrics(gold, t5_sum, inp, nli_pipeline)
+                m_raw = get_metrics(gold, lora_sum_raw, inp, nli_pipeline)
+                m_ref = get_metrics(gold, lora_sum_refined, inp, nli_pipeline)
                 
                 status.update(label="✅ Analysis Complete!", state="complete", expanded=False)
 
-            # RESULTS DISPLAY
             st.divider()
-            st.subheader("📊 Key Performance Indicators")
-            c1, c2, c3 = st.columns(3)
-            
-            # Improvement calculations for Faithfulness
-            raw_delta_faith = m_lora_raw['FAITH'] - m_t5['FAITH']
-            ref_delta_faith = m_lora_ref['FAITH'] - m_lora_raw['FAITH']
-    
-            # Ensure value is the SECOND positional argument
-            c1.metric(
-                label="Base T5 Faithfulness", 
-                value=f"{m_t5['FAITH']:.2%}"
-            )
-            
-            c2.metric(
-                label="LoRA Raw", 
-                value=f"{m_lora_raw['FAITH']:.2%}", 
-                delta=f"{raw_delta_faith:+.2%}"
-            )
-            
-            c3.metric(
-                label="LoRA Refined", 
-                value=f"{m_lora_ref['FAITH']:.2%}", 
-                delta=f"{ref_delta_faith:+.2%}"
-            )
-            # --- Improvement calculations ---
-            # Calculate ROUGE-L Differences
-            rl_diff_raw = m_lora_raw['RL_F1'] - m_t5['RL_F1']
-            rl_diff_ref = m_lora_ref['RL_F1'] - m_lora_raw['RL_F1']
 
-            # Calculate BERTScore Differences
-            bs_diff_raw = m_lora_raw['BS_F1'] - m_t5['BS_F1']
-            bs_diff_ref = m_lora_ref['BS_F1'] - m_lora_raw['BS_F1']
+            # --- METRIC CALCULATIONS ---
+            # Faithfulness
+            f_diff_raw = m_raw['FAITH'] - m_t5['FAITH']
+            f_diff_ref = m_ref['FAITH'] - m_raw['FAITH']
+            
+            # ROUGE-L
+            rl_diff_raw = m_raw['RL_F1'] - m_t5['RL_F1']
+            rl_diff_ref = m_ref['RL_F1'] - m_raw['RL_F1']
 
-            st.subheader("📝 Summary Outputs")
+            # BERTScore
+            bs_diff_raw = m_raw['BS_F1'] - m_t5['BS_F1']
+            bs_diff_ref = m_ref['BS_F1'] - m_raw['BS_F1']
+
+            st.subheader("📝 Summary Outputs & Improvements")
             tabs = st.tabs(["🤖 Base T5", "🟠 LoRA Raw", "🟢 LoRA Refined", "🎯 Ground Truth"])
             
             with tabs[0]:
-                st.caption(f"ROUGE-L: {m_t5['RL_F1']:.4f} | BERTScore: {m_t5['BS_F1']:.4f}")
-                st.write(t5_sum)
+                st.caption(f"FAITH: {m_t5['FAITH']:.2%} | ROUGE-L: {m_t5['RL_F1']:.4f} | BERTScore: {m_t5['BS_F1']:.4f}")
+                # Using error box just for red background color as requested
+                st.error(f"**Baseline Output:**\n\n{t5_sum}")
 
             with tabs[1]:
-                # Dynamic indicators for LoRA Raw vs Base
+                f_arrow = "↑" if f_diff_raw >= 0 else "↓"
                 rl_arrow = "↑" if rl_diff_raw >= 0 else "↓"
                 bs_arrow = "↑" if bs_diff_raw >= 0 else "↓"
                 
                 st.caption(
-                    f"ROUGE-L: {m_lora_raw['RL_F1']:.4f} ({rl_arrow} {rl_diff_raw:+.2%}) | "
-                    f"BERTScore: {m_lora_raw['BS_F1']:.4f} ({bs_arrow} {bs_diff_raw:+.2%})"
+                    f"FAITH: {m_raw['FAITH']:.2%} ({f_arrow} {f_diff_raw:+.2%}) | "
+                    f"ROUGE-L: {m_raw['RL_F1']:.4f} ({rl_arrow} {rl_diff_raw:+.2%}) | "
+                    f"BERTScore: {m_raw['BS_F1']:.4f} ({bs_arrow} {bs_diff_raw:+.2%})"
                 )
-                st.warning(lora_sum_raw)
+                st.warning(f"**LoRA Raw Output:**\n\n{lora_sum_raw}")
 
             with tabs[2]:
-                # Dynamic indicators for Refined vs Raw
+                f_arrow_ref = "↑" if f_diff_ref >= 0 else "↓"
                 rl_arrow_ref = "↑" if rl_diff_ref >= 0 else "↓"
                 bs_arrow_ref = "↑" if bs_diff_ref >= 0 else "↓"
                 
                 st.caption(
-                    f"ROUGE-L: {m_lora_ref['RL_F1']:.4f} ({rl_arrow_ref} {rl_diff_ref:+.2%}) | "
-                    f"BERTScore: {m_lora_ref['BS_F1']:.4f} ({bs_arrow_ref} {bs_diff_ref:+.2%})"
+                    f"FAITH: {m_ref['FAITH']:.2%} ({f_arrow_ref} {f_diff_ref:+.2%}) | "
+                    f"ROUGE-L: {m_ref['RL_F1']:.4f} ({rl_arrow_ref} {rl_diff_ref:+.2%}) | "
+                    f"BERTScore: {m_ref['BS_F1']:.4f} ({bs_arrow_ref} {bs_diff_ref:+.2%})"
                 )
-                st.success(lora_sum_refined)
+                st.success(f"**NLI Refined Output:**\n\n{lora_sum_refined}")
 
             with tabs[3]:
-                st.info(gold)
+                st.info(f"**Target Summary:**\n\n{gold}")
 
         except Exception as e:
             st.error(f"Processing Error: {e}")
-            if st.button("Clear Cache & Retry"):
-                st.cache_resource.clear()
+            if st.button("Retry"):
                 st.rerun()
 else:
     st.info("👈 Enter a URL in the sidebar and click 'Run Analysis' to start.")
