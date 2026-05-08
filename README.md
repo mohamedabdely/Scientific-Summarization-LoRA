@@ -60,10 +60,11 @@ The repository includes detailed evidence of model performance:
    import urllib
    print("Your Password for the link is:", urllib.request.urlopen('https://ipv4.icanhazip.com').read().decode('utf8').strip())
    !streamlit run app.py & npx localtunnel --port 8501
-4. **Testing Time**
-> Make sure to use the html url to infer  the model on arxiv paprs (e.g: https://arxiv.org/html/2605.05191v1)
+4. **Model Testing**
+> To ensure the scraper processes scientific papers correctly, you must use the AR5IV (HTML) version of the paper rather than the standard PDF link (e.g: https://arxiv.org/html/2605.05191v1)
 
-6. **Hardware Requirements**
+> **NOTE [Streamlit Sync Errors]:** Due to the dynamic nature of the inference pipeline and LocalTunnel's connection stability, you may occasionally encounter a Frontend Fetch Error (e.g., Failed to fetch dynamically imported module). In this case, please *hard refresh the page.*
+5. **Hardware Requirements**
 > GPU (Recommended): NVIDIA GPU with 8GB+ VRAM (e.g., T4, RTX 3060+) for fast inference.
 
 > CPU: Supported, but inference times will be significantly higher.
