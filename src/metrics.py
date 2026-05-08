@@ -11,35 +11,40 @@ from nltk.tokenize import sent_tokenize
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def get_faithfulness(source, summary):
+# metrics.py
+
+def get_faithfulness(source, summary, nli_pipe): # Add pipe here
     summary_sentences = sent_tokenize(summary)
     if not summary_sentences: return 0.0
     pairs = [{"text": source, "text_pair": sent} for sent in summary_sentences]
     try:
-        results = nli_pipeline(pairs, batch_size=4, truncation=True, max_length=1024)
+        # Use the passed nli_pipe
+        results = nli_pipe(pairs, batch_size=4, truncation=True, max_length=1024)
         scores = []
         for r in results:
             label = r['label'].lower()
-            if "entailment" in label: scores.append(r['score'])
-            elif "contradiction" in label: scores.append(-1.0)
-            else: scores.append(0.0)
+            # mapping for tasksource/deberta-base-long-nli labels
+            if "entailment" in label or "label_2" in label: 
+                scores.append(r['score'])
+            elif "contradiction" in label or "label_0" in label: 
+                scores.append(-1.0)
+            else: 
+                scores.append(0.0)
         return sum(scores) / len(scores)
-    except: return 0.0
+    except Exception as e:
+        print(f"Faithfulness Error: {e}") # Log the actual error
+        return 0.0
 
-def get_metrics(ref, hyp, source):
-    # Added delay to ensure all computational overhead is settled
+def get_metrics(ref, hyp, source, nli_pipe): # Add pipe here
     time.sleep(1.5)
-
     r_scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rouge3', 'rougeL'], use_stemmer=True)
     r_results = r_scorer.score(ref, hyp)
 
-    # BERTScore calculation
     P, R, F1 = bert_scorer([hyp], [ref], lang="en", verbose=False, device=DEVICE)
 
-    # Faithfulness calculation
-    faith = get_faithfulness(source, hyp)
+    # Pass the pipe down
+    faith = get_faithfulness(source, hyp, nli_pipe)
 
-    # Final sync sleep to ensure tensors are ready for extraction
     if DEVICE == "cuda":
         torch.cuda.synchronize()
     time.sleep(0.5)
