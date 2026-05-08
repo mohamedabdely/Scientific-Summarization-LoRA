@@ -82,9 +82,9 @@ if run_btn:
                 
                 st.write("📊 **Metrics:** Calculating comparative scores...")
                 # FIX: Passing nli_pipeline is required for Faithfulness calculation
-                m_t5 = get_metrics(gold, t5_sum, inp)
-                m_raw = get_metrics(gold, lora_sum_raw, inp)
-                m_ref = get_metrics(gold, lora_sum_refined, inp)
+                m_t5 = get_metrics(gold, t5_sum, inp, nli_pipeline)
+                m_raw = get_metrics(gold, lora_sum_raw, inp, nli_pipeline)
+                m_ref = get_metrics(gold, lora_sum_refined, inp, nli_pipeline)
                 
                 status.update(label="✅ Analysis Complete!", state="complete", expanded=False)
 
