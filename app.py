@@ -70,14 +70,14 @@ if run_btn:
                 gold = clean_scientific_text(raw_gold)
                 inp = extract_thesis_strategy_v1(raw_inp, tokenizer)
                 
-                st.write("🤖 **Inference:** Generating Base T5...")
+                st.write("⚙️ **Inference:** Generating Base T5...")
                 with lora_model.disable_adapter():
                     t5_sum = gen(lora_model, inp)
                 
-                st.write("🟠 **Inference:** Generating LoRA Optimized...")
+                st.write("⚙️ **Inference:** Generating LoRA Optimized...")
                 lora_sum_raw = gen(lora_model, inp)
                 
-                st.write("⚖️ **Refinement:** Running NLI Post-processing...")
+                st.write("⚙️ **Refinement:** Generating refinement via NLI Post-processing...")
                 lora_sum_refined = post_processing_nli(lora_sum_raw)
                 
                 st.write("📊 **Metrics:** Calculating comparative scores...")
@@ -104,7 +104,7 @@ if run_btn:
             bs_diff_ref = m_ref['BS_F1'] - m_raw['BS_F1']
 
             st.subheader("📝 Summary Outputs & Improvements")
-            tabs = st.tabs(["🤖 Base T5", "🟠 LoRA Raw", "🟢 LoRA Refined", "🎯 Ground Truth"])
+            tabs = st.tabs(["🔴 Base T5", "🟠 LoRA Raw", "🟢 LoRA Refined", "🎯 Ground Truth"])
             
             with tabs[0]:
                 st.caption(f"FAITH: {m_t5['FAITH']:.2%} | ROUGE-L: {m_t5['RL_F1']:.4f} | BERTScore: {m_t5['BS_F1']:.4f}")
