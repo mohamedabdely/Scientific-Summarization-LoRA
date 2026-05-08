@@ -63,7 +63,7 @@ The repository includes detailed evidence of model performance:
 4. **Model Testing**
 > To ensure the scraper processes scientific papers correctly, you must use the AR5IV (HTML) version of the paper rather than the standard PDF link (e.g: https://arxiv.org/html/2605.05191v1)
 
-> **NOTE [Streamlit Sync Errors]:** Due to the dynamic nature of the inference pipeline and LocalTunnel's connection stability, you may occasionally encounter a Frontend Fetch Error (e.g., Failed to fetch dynamically imported module). In this case, please *hard refresh the page.*
+> **NOTE [Streamlit Sync Errors]:** Due to the dynamic nature of the inference pipeline and LocalTunnel's connection stability, you may occasionally encounter a Frontend Fetch Error (e.g., Failed to fetch dynamically imported module). In this case, please *keep hard refreshing the page.*
 5. **Hardware Requirements**
 > GPU (Recommended): NVIDIA GPU with 8GB+ VRAM (e.g., T4, RTX 3060+) for fast inference.
 
