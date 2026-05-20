@@ -41,11 +41,31 @@ def gen(model_obj, text):
         )
     return tokenizer.decode(outputs[0], skip_special_tokens=True)
 
-# --- 3. SIDEBAR UI ---
+# --- 3. SIDEBAR NAVIGATION & UI ---
 with st.sidebar:
     st.title("🔬 Lab Settings")
     st.markdown("---")
-    url_input = st.text_input("Scientific Article URL", placeholder="https://arxiv.org/html/...")
+    
+    # NEW: UI Router Mode Selection
+    app_mode = st.radio(
+        "Select Operation Mode",
+        ["URL Web Scraper", "Direct Text Input"],
+        index=0
+    )
+    st.markdown("---")
+    
+    # Contextual Input Controls based on Router selection
+    if app_mode == "URL Web Scraper":
+        url_input = st.text_input("Scientific Article URL", placeholder="https://arxiv.org/html/...")
+        text_input = None
+    else:
+        text_input = st.text_area(
+            "Paste Scientific Text (Max 512 Tokens Context)", 
+            placeholder="Type or paste your research text here...",
+            height=250
+        )
+        url_input = None
+
     run_btn = st.button("🚀 Run Analysis", width='stretch', type="primary")
     st.markdown("---")
     st.subheader("System Info")
@@ -56,19 +76,33 @@ st.title("🧪 SciSumm AI Analysis Lab")
 st.markdown("Evaluate scientific summarization using Base T5 vs. LoRA + NLI refinement.")
 
 if run_btn:
-    if not url_input:
+    # Validation checks depending on the routed UI selection
+    if app_mode == "URL Web Scraper" and not url_input:
         st.warning("Please enter a URL in the sidebar.")
+    elif app_mode == "Direct Text Input" and not text_input.strip():
+        st.warning("Please paste some text in the sidebar to summarize.")
     else:
         try:
             with st.status("🛠️ Pipeline Executing...", expanded=True) as status:
-                st.write("📡 **Scraper:** Fetching article...")
-                targets = run_scientific_scraper(url_input)
-                if not targets: raise ValueError("Scraper returned no data.")
-                _, raw_gold, raw_inp = targets
                 
-                st.write("🧹 **Preprocessor:** Cleaning text...")
-                gold = clean_scientific_text(raw_gold)
-                inp = extract_thesis_strategy_v1(raw_inp, tokenizer)
+                # BRANCH A: Executing Scraper Mode
+                if app_mode == "URL Web Scraper":
+                    st.write("📡 **Scraper:** Fetching article...")
+                    targets = run_scientific_scraper(url_input)
+                    if not targets: raise ValueError("Scraper returned no data.")
+                    _, raw_gold, raw_inp = targets
+                    
+                    st.write("🧹 **Preprocessor:** Cleaning text...")
+                    gold = clean_scientific_text(raw_gold)
+                    inp = extract_thesis_strategy_v1(raw_inp, tokenizer)
+                
+                # BRANCH B: Executing Direct Input Mode (NEW)
+                else:
+                    st.write("🧹 **Preprocessor:** Structuring text buffer...")
+                    # Pass the raw text block straight to the token processor
+                    inp = extract_thesis_strategy_v1(text_input, tokenizer)
+                    # Use a mock gold summary since a direct user string has no ground truth
+                    gold = "[N/A - Direct Manual Input Mode]"
                 
                 st.write("⚙️ **Inference:** Generating Base T5...")
                 with lora_model.disable_adapter():
@@ -108,7 +142,6 @@ if run_btn:
             
             with tabs[0]:
                 st.caption(f"FAITH: {m_t5['FAITH']:.2%} | ROUGE-L: {m_t5['RL_F1']:.4f} | BERTScore: {m_t5['BS_F1']:.4f}")
-                # Using error box just for red background color as requested
                 st.error(f"**Baseline Output:**\n\n{t5_sum}")
 
             with tabs[1]:
@@ -143,4 +176,8 @@ if run_btn:
             if st.button("Retry"):
                 st.rerun()
 else:
-    st.info("👈 Enter a URL in the sidebar and click 'Run Analysis' to start.")
+    # Changed generic placeholder text to match the new dynamic mode option
+    if app_mode == "URL Web Scraper":
+        st.info("👈 Enter a URL in the sidebar and click 'Run Analysis' to start.")
+    else:
+        st.info("👈 Paste text into the box on the sidebar and click 'Run Analysis' to test the direct summarizer.")
