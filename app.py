@@ -102,7 +102,7 @@ if run_btn:
                     # Pass the raw text block straight to the token processor
                     inp = extract_thesis_strategy_v1(text_input, tokenizer)
                     # Use a mock gold summary since a direct user string has no ground truth
-                    gold = "[N/A - Direct Manual Input Mode]"
+                    gold = clean_scientific_text(text_input)
                 
                 st.write("⚙️ **Inference:** Generating Base T5...")
                 with lora_model.disable_adapter():
