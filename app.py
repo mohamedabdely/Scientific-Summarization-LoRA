@@ -47,16 +47,16 @@ with st.sidebar:
     st.title("🔬 Lab Settings")
     st.markdown("---")
     
-    # UPDATED: UI Router Mode Selection with 3rd option
+    # UPDATED: UI Router Mode Selection with better descriptive titles
     app_mode = st.radio(
         "Select Operation Mode",
-        ["URL Web Scraper", "Section-Focused URL Web Scraper", "Direct Text Input"],
+        ["Full Document URL Analysis", "Section-by-Section URL Analysis", "Manual Text Entry"],
         index=0
     )
     st.markdown("---")
     
     # Contextual Input Controls based on Router selection
-    if app_mode in ["URL Web Scraper", "Section-Focused URL Web Scraper"]:
+    if app_mode in ["Full Document URL Analysis", "Section-by-Section URL Analysis"]:
         url_input = st.text_input("Scientific Article URL", placeholder="https://arxiv.org/html/...")
         text_input = None
     else:
@@ -78,16 +78,16 @@ st.markdown("Evaluate scientific summarization using Base T5 vs. LoRA + NLI refi
 
 if run_btn:
     # Validation checks depending on the routed UI selection
-    if app_mode in ["URL Web Scraper", "Section-Focused URL Web Scraper"] and not url_input:
+    if app_mode in ["Full Document URL Analysis", "Section-by-Section URL Analysis"] and not url_input:
         st.warning("Please enter a URL in the sidebar.")
-    elif app_mode == "Direct Text Input" and not text_input.strip():
+    elif app_mode == "Manual Text Entry" and not text_input.strip():
         st.warning("Please paste some text in the sidebar to summarize.")
     else:
         try:
             with st.status("🛠️ Pipeline Executing...", expanded=True) as status:
                 
-                # BRANCH A: Executing Scraper Mode
-                if app_mode == "URL Web Scraper":
+                # BRANCH A: Executing Scraper Mode (Global Document)
+                if app_mode == "Full Document URL Analysis":
                     st.write("📡 **Scraper:** Fetching article...")
                     targets = run_scientific_scraper(url_input)
                     if not targets: raise ValueError("Scraper returned no data.")
@@ -97,8 +97,8 @@ if run_btn:
                     gold = clean_scientific_text(raw_gold)
                     inp = extract_thesis_strategy_v1(raw_inp, tokenizer)
                 
-                # BRANCH B: Executing Section-Focused Mode (NEW)
-                elif app_mode == "Section-Focused URL Web Scraper":
+                # BRANCH B: Executing Section-Focused Mode
+                elif app_mode == "Section-by-Section URL Analysis":
                     st.write("📡 **Scraper:** Fetching article...")
                     targets = run_scientific_scraper(url_input)
                     if not targets: raise ValueError("Scraper returned no data.")
@@ -176,7 +176,7 @@ if run_btn:
             st.divider()
 
             # --- OPTIONAL SECTION METRICS VISUALIZATION ---
-            if app_mode == "Section-Focused URL Web Scraper":
+            if app_mode == "Section-by-Section URL Analysis":
                 st.subheader("📑 Section-Level Summaries & Metrics")
                 for res in section_results:
                     with st.expander(f"Section: {res['title']}"):
@@ -205,7 +205,7 @@ if run_btn:
             bs_diff_raw = m_raw['BS_F1'] - m_t5['BS_F1']
             bs_diff_ref = m_ref['BS_F1'] - m_raw['BS_F1']
 
-            st.subheader("📝 Summary Outputs & Improvements" + (" (Global Summary)" if app_mode == "Section-Focused URL Web Scraper" else ""))
+            st.subheader("📝 Summary Outputs & Improvements" + (" (Global Summary)" if app_mode == "Section-by-Section URL Analysis" else ""))
             tabs = st.tabs(["🔴 Base T5", "🟠 LoRA Raw", "🟢 LoRA Refined", "🎯 Ground Truth"])
             
             with tabs[0]:
@@ -244,7 +244,7 @@ if run_btn:
             if st.button("Retry"):
                 st.rerun()
 else:
-    if app_mode in ["URL Web Scraper", "Section-Focused URL Web Scraper"]:
+    if app_mode in ["Full Document URL Analysis", "Section-by-Section URL Analysis"]:
         st.info("👈 Enter a URL in the sidebar and click 'Run Analysis' to start.")
     else:
         st.info("👈 Paste text into the box on the sidebar and click 'Run Analysis' to test the direct summarizer.")
