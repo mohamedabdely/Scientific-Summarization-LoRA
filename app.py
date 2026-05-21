@@ -117,7 +117,7 @@ if run_btn:
 
                     # Process each section dynamically
                     for idx, (sec_title, sec_content) in enumerate(sections):
-                        st.write(f"⚙️ **Processing Section:** {sec_title.strip()}...")
+                        st.write(f"⚙️ **Processing Section:** '{sec_title.strip()}'")
                         sec_gold = clean_scientific_text(sec_content)
                         sec_inp = extract_thesis_strategy_v1(sec_content, tokenizer)
 
@@ -127,7 +127,7 @@ if run_btn:
                         sec_lora_raw = gen(lora_model, sec_inp)
                         sec_lora_ref = post_processing_nli(sec_lora_raw)
 
-                        st.write(f"📊 **Metrics for Section:** {sec_title.strip()}...")
+                        st.write(f"📊 **Metrics for Section:** '{sec_title.strip()}'")
                         m_t5_sec = get_metrics(sec_gold, sec_t5_sum, sec_inp, nli_pipeline)
                         m_raw_sec = get_metrics(sec_gold, sec_lora_raw, sec_inp, nli_pipeline)
                         m_ref_sec = get_metrics(sec_gold, sec_lora_ref, sec_inp, nli_pipeline)
