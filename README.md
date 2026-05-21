@@ -60,22 +60,25 @@ The repository includes detailed evidence of model performance:
    import urllib
    print("Your Password for the link is:", urllib.request.urlopen('https://ipv4.icanhazip.com').read().decode('utf8').strip())
    !streamlit run app.py & npx localtunnel --port 8501
-4. **Model Testing**
-> To ensure the scraper processes scientific papers correctly, you must use the AR5IV (HTML) version of the paper rather than the standard PDF link (e.g: https://arxiv.org/html/2605.05191v1)
 
-> **NOTE [Streamlit Sync Errors]:** Due to the dynamic nature of the inference pipeline and LocalTunnel's connection stability, you may occasionally encounter a Frontend Fetch Error (e.g., Failed to fetch dynamically imported module). In this case, please *keep hard refreshing the page.*
-5. **Hardware Requirements**
-> GPU (Recommended): NVIDIA GPU with 8GB+ VRAM (e.g., T4, RTX 3060+) for fast inference.
+---
 
-> CPU: Supported, but inference times will be significantly higher.
-
-### **🎛️ Dashboard Operation Modes**
+## 🎛️ Dashboard Operation Modes**
 > The Streamlit UI features three distinct evaluation modes to handle different summarization needs:  
 > * **Full Document URL Analysis:** Scrapes an ArXiv HTML link, cleans the document, and processes the full text at once to generate a comprehensive global summary.  
 > * **Section-by-Section URL Analysis:** Dynamically extracts specific sections of a paper. It generates granular, NLI-refined summaries for each section individually, then combines them into a highly detailed final global summary.  
-> * **Manual Text Entry:** Allows you to paste raw scientific text (up to 512 tokens) directly into the UI for instant summarization and metrics calculation without needing a web URL.  
+> * **Manual Text Entry:** Allows you to paste raw scientific text (up to 512 tokens) directly into the UI for instant summarization and metrics calculation without needing a web URL.
+
+### Model Testing
+> To ensure the scraper processes scientific papers correctly, you must use the AR5IV (HTML) version of the paper rather than the standard PDF link (e.g: https://arxiv.org/html/2605.05191v1)  
+> **NOTE [Streamlit Sync Errors]:** Due to the dynamic nature of the inference pipeline and LocalTunnel's connection stability, you may occasionally encounter a Frontend Fetch Error (e.g., Failed to fetch dynamically imported module). In this case, please *keep hard refreshing the page.*
+### Hardware Requirements
+> GPU (Recommended): NVIDIA GPU with 8GB+ VRAM (e.g., T4, RTX 3060+) for fast inference.  
+> CPU: Supported, but inference times will be significantly higher.
+
 ---
-### **Author Information**
+
+## Author Information
 > **Name:** Abdelli Mohamed Abdelhak  
 > **Research Field:** Natural Language Processing / Machine Learning  
 > **Institutions:** 
