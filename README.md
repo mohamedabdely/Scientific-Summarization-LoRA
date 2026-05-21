@@ -69,7 +69,11 @@ The repository includes detailed evidence of model performance:
 
 > CPU: Supported, but inference times will be significantly higher.
 
-
+### **🎛️ Dashboard Operation Modes**
+> The Streamlit UI features three distinct evaluation modes to handle different summarization needs:  
+> * **Full Document URL Analysis:** Scrapes an ArXiv HTML link, cleans the document, and processes the full text at once to generate a comprehensive global summary.  
+> * **Section-by-Section URL Analysis:** Dynamically extracts specific sections of a paper. It generates granular, NLI-refined summaries for each section individually, then combines them into a highly detailed final global summary.  
+> * **Manual Text Entry:** Allows you to paste raw scientific text (up to 512 tokens) directly into the UI for instant summarization and metrics calculation without needing a web URL.  
 ---
 ### **Author Information**
 > **Name:** Abdelli Mohamed Abdelhak  
