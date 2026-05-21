@@ -72,8 +72,7 @@ The repository includes detailed evidence of model performance:
 
 ---
 ### **Author Information**
-> **Name:** Abdelli Mohamed Abdelhak
-
+> **Name:** Abdelli Mohamed Abdelhak  
 > **Research Field:** Natural Language Processing / Machine Learning  
 > **Institutions:** 
 > *   **HICSM**, University of Sfax, Tunisia  
